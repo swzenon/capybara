@@ -1,0 +1,2232 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cappybara Abenteuer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB 0%, #90EE90 70%, #8B7355 70%, #8B7355 100%);
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        #timer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 20;
+        }
+
+        #gameOver h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        #gameOver p {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        #gameOver button {
+            font-size: 20px;
+            padding: 15px 30px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #gameOver button:hover {
+            background: #45a049;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-size: 16px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        /* Sidebar Styles */
+        #menuToggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(139, 69, 19, 0.9);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        #menuToggle:hover {
+            background: rgba(139, 69, 19, 1);
+            transform: scale(1.05);
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            background: linear-gradient(to bottom, #8B4513, #654321);
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+            z-index: 999;
+            transition: width 0.3s ease;
+            overflow: hidden;
+            padding-top: 80px;
+        }
+
+        #sidebar.collapsed {
+            width: 0;
+        }
+
+        #sidebar.expanded {
+            width: 220px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            border-left: 4px solid transparent;
+        }
+
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-left-color: #FFD700;
+        }
+
+        .menu-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-left-color: #FFD700;
+        }
+
+        .menu-item .icon {
+            font-size: 24px;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .menu-item .label {
+            font-size: 16px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
+        /* Platzhalter-Seiten */
+        .page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .page.hidden {
+            display: none;
+        }
+
+        .page h1 {
+            font-size: 48px;
+            color: #8B4513;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .page p {
+            font-size: 24px;
+            color: #654321;
+            margin-bottom: 30px;
+        }
+
+        .page-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 600px;
+        }
+
+        .page-content img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin-bottom: 20px;
+            object-fit: cover;
+        }
+
+        /* Avatarshop Grid */
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .avatar-item {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .avatar-item:hover {
+            transform: scale(1.05);
+        }
+
+        .avatar-item .avatar-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .avatar-item .avatar-price {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        /* Einstellungen */
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-slider {
+            width: 150px;
+        }
+
+        /* Spielauswahl auf Home-Seite */
+        .game-selection {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .game-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            width: 280px;
+        }
+
+        .game-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-card img {
+            width: 120px;
+            height: 120px;
+            border-radius: 15px;
+            object-fit: cover;
+            margin-bottom: 15px;
+        }
+
+        .game-card h2 {
+            color: #8B4513;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .game-card p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .game-card .play-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .game-card .play-btn:hover {
+            background: #45a049;
+        }
+
+        /* Two Player Game Styles */
+        #twoPlayerContainer {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        #twoPlayerCanvas {
+            display: block;
+        }
+
+        .player-score {
+            position: absolute;
+            top: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-size: 20px;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        #player1Score {
+            left: 20px;
+        }
+
+        #player2Score {
+            right: 20px;
+        }
+
+        #twoPlayerInstructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-size: 14px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        #twoPlayerGameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 20;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(139, 69, 19, 0.9);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            z-index: 15;
+            font-size: 14px;
+        }
+
+        .back-btn:hover {
+            background: rgba(139, 69, 19, 1);
+        }
+
+        /* Shop Layout */
+        .shop-container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 900px;
+            width: 90%;
+        }
+
+        .shop-layout {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .shop-items {
+            flex: 1;
+        }
+
+        .my-cappybara {
+            width: 280px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .cappybara-preview {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 20px;
+            background: linear-gradient(to bottom, #87CEEB, #90EE90);
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cappybara-image {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .equipped-item {
+            position: absolute;
+            font-size: 40px;
+            z-index: 10;
+        }
+
+        .hat-position {
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .accessory-position {
+            bottom: 60px;
+            right: 20px;
+        }
+
+        .owned-items {
+            margin-top: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 10px;
+            min-height: 60px;
+        }
+
+        .owned-item {
+            display: inline-block;
+            font-size: 24px;
+            margin: 5px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background 0.2s;
+        }
+
+        .owned-item:hover {
+            background: #e0e0e0;
+        }
+
+        .owned-item.equipped {
+            background: #90EE90;
+        }
+
+        .remove-btn {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .remove-btn:hover {
+            background: #d32f2f;
+        }
+
+        .avatar-item.owned {
+            background: #90EE90;
+            position: relative;
+        }
+
+        .avatar-item.owned::after {
+            content: '✓';
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #4CAF50;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Schneeballschlacht Styles */
+        #snowballContainer {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        #snowballCanvas {
+            display: block;
+        }
+
+        .snowball-score {
+            position: absolute;
+            top: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-size: 20px;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        #snowballP1 {
+            left: 20px;
+        }
+
+        #snowballP2 {
+            right: 20px;
+        }
+
+        #snowballInstructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-size: 14px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        #snowballModeSelect {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 30;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        #snowballModeSelect h2 {
+            color: #8B4513;
+            margin-bottom: 20px;
+        }
+
+        #snowballModeSelect p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .mode-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .mode-btn.human {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .mode-btn.ai {
+            background: #2196F3;
+            color: white;
+        }
+
+        #snowballGameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 25;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hamburger-Button -->
+    <button id="menuToggle">☰</button>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="collapsed">
+        <div class="menu-item active" data-page="home">
+            <span class="icon">🏠</span>
+            <span class="label">Home</span>
+        </div>
+        <div class="menu-item" data-page="account">
+            <span class="icon">👤</span>
+            <span class="label">Account</span>
+        </div>
+        <div class="menu-item" data-page="shop">
+            <span class="icon">🛒</span>
+            <span class="label">Avatarshop</span>
+        </div>
+        <div class="menu-item" data-page="settings">
+            <span class="icon">⚙️</span>
+            <span class="label">Einstellungen</span>
+        </div>
+    </div>
+
+    <!-- Account Seite -->
+    <div id="accountPage" class="page hidden">
+        <div class="page-content">
+            <img src="Cappybara.jpg" alt="Cappybara Avatar">
+            <h1>👤 Mein Account</h1>
+            <p>Spielername: CappyPlayer</p>
+            <p>Gesammeltes Gold: <span id="totalGold">0</span></p>
+            <p style="color: #888; font-size: 16px;">Weitere Funktionen kommen bald...</p>
+        </div>
+    </div>
+
+    <!-- Avatarshop Seite -->
+    <div id="shopPage" class="page hidden">
+        <div class="shop-container">
+            <h1 style="text-align: center; color: #8B4513; margin-bottom: 10px;">🛒 Avatarshop</h1>
+            <p style="text-align: center; color: #654321; margin-bottom: 20px;">Kaufe neue Outfits für deine Cappybara! Dein Gold: <span id="shopGold">0</span> 💰</p>
+
+            <div class="shop-layout">
+                <!-- Kleidungsstücke links -->
+                <div class="shop-items">
+                    <h3 style="margin-bottom: 15px; color: #8B4513;">Kleidung</h3>
+                    <div class="avatar-grid">
+                        <div class="avatar-item" onclick="buyItem('hat', 50, '🎩')">
+                            <div class="avatar-icon">🎩</div>
+                            <div>Zylinder</div>
+                            <div class="avatar-price">💰 50</div>
+                        </div>
+                        <div class="avatar-item" onclick="buyItem('crown', 100, '👑')">
+                            <div class="avatar-icon">👑</div>
+                            <div>Krone</div>
+                            <div class="avatar-price">💰 100</div>
+                        </div>
+                        <div class="avatar-item" onclick="buyItem('bow', 30, '🎀')">
+                            <div class="avatar-icon">🎀</div>
+                            <div>Schleife</div>
+                            <div class="avatar-price">💰 30</div>
+                        </div>
+                        <div class="avatar-item" onclick="buyItem('glasses', 40, '🕶️')">
+                            <div class="avatar-icon">🕶️</div>
+                            <div>Sonnenbrille</div>
+                            <div class="avatar-price">💰 40</div>
+                        </div>
+                        <div class="avatar-item" onclick="buyItem('scarf', 25, '🧣')">
+                            <div class="avatar-icon">🧣</div>
+                            <div>Schal</div>
+                            <div class="avatar-price">💰 25</div>
+                        </div>
+                        <div class="avatar-item" onclick="buyItem('mask', 60, '🎭')">
+                            <div class="avatar-icon">🎭</div>
+                            <div>Maske</div>
+                            <div class="avatar-price">💰 60</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Meine Cappybara rechts -->
+                <div class="my-cappybara">
+                    <h3 style="margin-bottom: 15px; color: #8B4513;">Meine Cappybara</h3>
+                    <div class="cappybara-preview">
+                        <div id="equippedHat" class="equipped-item hat-position"></div>
+                        <img src="Cappybara.jpg" alt="Meine Cappybara" class="cappybara-image">
+                        <div id="equippedAccessory" class="equipped-item accessory-position"></div>
+                    </div>
+                    <div id="ownedItems" class="owned-items">
+                        <p style="color: #888; font-size: 14px;">Noch keine Items gekauft</p>
+                    </div>
+                    <button onclick="removeAllItems()" class="remove-btn">Alle Items ablegen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Einstellungen Seite -->
+    <div id="settingsPage" class="page hidden">
+        <div class="page-content">
+            <h1>⚙️ Einstellungen</h1>
+            <div class="settings-item">
+                <span>Musik Lautstärke</span>
+                <input type="range" class="settings-slider" id="musicVolume" min="0" max="100" value="50">
+            </div>
+            <div class="settings-item">
+                <span>Soundeffekte</span>
+                <input type="range" class="settings-slider" id="sfxVolume" min="0" max="100" value="50">
+            </div>
+            <div class="settings-item">
+                <span>Schwierigkeit</span>
+                <select id="difficulty" style="padding: 5px; border-radius: 5px;">
+                    <option value="easy">Einfach</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="hard">Schwer</option>
+                </select>
+            </div>
+            <p style="color: #888; font-size: 14px; margin-top: 20px;">Weitere Einstellungen kommen bald...</p>
+        </div>
+    </div>
+
+    <!-- Home Spielauswahl Seite -->
+    <div id="homePage" class="page">
+        <h1 style="margin-bottom: 30px;">🎮 Cappybara Spiele</h1>
+        <div class="game-selection">
+            <div class="game-card" onclick="startJumpAndRun()">
+                <img src="Cappybara.jpg" alt="Jump and Run">
+                <h2>🏃 Cappybara Jump and Run</h2>
+                <p>Springe und renne durch die Welt! Sammle so viele Goldstücke wie möglich in 2 Minuten.</p>
+                <button class="play-btn">Spielen</button>
+            </div>
+            <div class="game-card" onclick="startTwoPlayerRun()">
+                <img src="Cappybara.jpg" alt="Two Player Run">
+                <h2>👥 Cappybara Two Player Run</h2>
+                <p>Renne mit einem Freund! Springe über Hindernisse und sei der Schnellste. Für 2 Spieler!</p>
+                <button class="play-btn">Spielen</button>
+            </div>
+            <div class="game-card" onclick="startSnowballFight()">
+                <div style="font-size: 80px; margin-bottom: 15px;">⛄</div>
+                <h2>❄️ Schneeballschlacht</h2>
+                <p>Cappybara vs Schneemann! Wirf Schneebälle und besiege deinen Gegner. Mensch oder AI!</p>
+                <button class="play-btn">Spielen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jump and Run Game Container -->
+    <div id="gameContainer" style="display: none;">
+        <button class="back-btn" onclick="backToHome()">← Zurück zur Spielauswahl</button>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="ui">
+            <span id="score">💰 Gold: 0</span>
+        </div>
+        <div id="timer">
+            <span id="time">⏱️ Zeit: 2:00</span>
+        </div>
+        <div id="instructions">
+            Pfeiltasten oder A/D zum Bewegen • Leertaste zum Springen
+        </div>
+        <div id="gameOver">
+            <h1>Spiel vorbei!</h1>
+            <p id="finalScore"></p>
+            <button onclick="restartGame()">Nochmal spielen</button>
+            <button onclick="backToHome()" style="margin-left: 10px; background: #8B4513;">Zur Spielauswahl</button>
+        </div>
+        <audio id="bgMusic" loop>
+            <source src="CappybaraSong.m4a" type="audio/mp4">
+        </audio>
+    </div>
+
+    <!-- Two Player Run Game Container -->
+    <div id="twoPlayerContainer">
+        <button class="back-btn" onclick="backToHome()">← Zurück zur Spielauswahl</button>
+        <canvas id="twoPlayerCanvas" width="900" height="400"></canvas>
+        <div id="player1Score" class="player-score">🟢 Spieler 1: Bereit</div>
+        <div id="player2Score" class="player-score">🔵 Spieler 2: Bereit</div>
+        <div id="twoPlayerInstructions">
+            Spieler 1: W zum Springen • Spieler 2: Pfeil-Hoch zum Springen
+        </div>
+        <div id="twoPlayerGameOver">
+            <h1 id="twoPlayerWinner">Gewinner!</h1>
+            <p id="twoPlayerResult"></p>
+            <button onclick="restartTwoPlayer()">Nochmal spielen</button>
+            <button onclick="backToHome()" style="margin-left: 10px; background: #8B4513;">Zur Spielauswahl</button>
+        </div>
+    </div>
+
+    <!-- Schneeballschlacht Game Container -->
+    <div id="snowballContainer">
+        <button class="back-btn" onclick="backToHome()">← Zurück zur Spielauswahl</button>
+        <canvas id="snowballCanvas" width="900" height="500"></canvas>
+        <div id="snowballP1" class="snowball-score">❤️❤️❤️ Cappybara</div>
+        <div id="snowballP2" class="snowball-score">Schneemann ❤️❤️❤️</div>
+        <div id="snowballInstructions">
+            Cappybara: W/S bewegen, D werfen • Schneemann: ↑/↓ bewegen, ← werfen
+        </div>
+        <div id="snowballModeSelect">
+            <h2>⛄ Schneeballschlacht</h2>
+            <p>Wähle deinen Gegner:</p>
+            <button class="mode-btn human" onclick="selectSnowballMode('human')">👥 Mensch</button>
+            <button class="mode-btn ai" onclick="selectSnowballMode('ai')">🤖 AI</button>
+        </div>
+        <div id="snowballGameOver">
+            <h1 id="snowballWinner">Gewinner!</h1>
+            <p id="snowballResult"></p>
+            <button onclick="restartSnowball()">Nochmal spielen</button>
+            <button onclick="backToHome()" style="margin-left: 10px; background: #8B4513;">Zur Spielauswahl</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== SIDEBAR MENU ====================
+        const sidebar = document.getElementById('sidebar');
+        const menuToggle = document.getElementById('menuToggle');
+        const menuItems = document.querySelectorAll('.menu-item');
+        const gameContainer = document.getElementById('gameContainer');
+        const twoPlayerContainer = document.getElementById('twoPlayerContainer');
+        const snowballContainer = document.getElementById('snowballContainer');
+        const homePage = document.getElementById('homePage');
+        const pages = {
+            home: document.getElementById('homePage'),
+            account: document.getElementById('accountPage'),
+            shop: document.getElementById('shopPage'),
+            settings: document.getElementById('settingsPage')
+        };
+
+        let currentPage = 'home';
+        let currentGame = null; // 'jumprun' oder 'twoplayer'
+        let gamePaused = false;
+
+        // Toggle Sidebar
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            sidebar.classList.toggle('expanded');
+        });
+
+        // Menü-Items Click Handler
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const page = item.dataset.page;
+                showPage(page);
+            });
+        });
+
+        // Seite anzeigen
+        function showPage(pageName) {
+            // Aktiven Menüpunkt aktualisieren
+            menuItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.page === pageName) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Alle Container verstecken
+            gameContainer.style.display = 'none';
+            twoPlayerContainer.style.display = 'none';
+            snowballContainer.style.display = 'none';
+            Object.values(pages).forEach(page => {
+                page.classList.add('hidden');
+            });
+
+            if (pageName === 'home') {
+                // Home-Seite mit Spielauswahl anzeigen
+                homePage.classList.remove('hidden');
+                pauseGame();
+                pauseTwoPlayer();
+                pauseSnowball();
+                currentGame = null;
+            } else {
+                // Andere Seiten anzeigen
+                pauseGame();
+                pauseTwoPlayer();
+                pauseSnowball();
+                if (pages[pageName]) {
+                    pages[pageName].classList.remove('hidden');
+                }
+                // Gold auf Account-Seite aktualisieren
+                if (pageName === 'account') {
+                    document.getElementById('totalGold').textContent = score;
+                }
+                // Shop Gold aktualisieren
+                if (pageName === 'shop') {
+                    document.getElementById('shopGold').textContent = score;
+                    updateShopDisplay();
+                }
+            }
+
+            currentPage = pageName;
+
+            // Sidebar nach Auswahl einklappen
+            sidebar.classList.add('collapsed');
+            sidebar.classList.remove('expanded');
+        }
+
+        // Jump and Run starten
+        function startJumpAndRun() {
+            homePage.classList.add('hidden');
+            gameContainer.style.display = 'block';
+            currentGame = 'jumprun';
+            if (!gameRunning) {
+                restartGame();
+            } else {
+                resumeGame();
+            }
+            startMusic();
+        }
+
+        // Two Player Run starten
+        function startTwoPlayerRun() {
+            homePage.classList.add('hidden');
+            twoPlayerContainer.style.display = 'block';
+            currentGame = 'twoplayer';
+            startTwoPlayerGame();
+            startMusic();
+        }
+
+        // Zurück zur Home-Seite
+        function backToHome() {
+            showPage('home');
+        }
+
+        // Spiel pausieren
+        let pauseStartTime = 0;
+        let totalPausedTime = 0;
+
+        function pauseGame() {
+            gamePaused = true;
+            pauseStartTime = Date.now();
+        }
+
+        // Spiel fortsetzen
+        function resumeGame() {
+            if (gamePaused && gameRunning) {
+                totalPausedTime += Date.now() - pauseStartTime;
+                gamePaused = false;
+                gameLoop();
+            }
+        }
+
+        // Musik-Lautstärke Slider
+        document.getElementById('musicVolume').addEventListener('input', (e) => {
+            const volume = e.target.value / 100;
+            document.getElementById('bgMusic').volume = volume;
+        });
+
+        // ==================== SHOP SYSTEM ====================
+        const ownedItems = [];
+        let equippedHat = null;
+        let equippedAccessory = null;
+
+        const itemTypes = {
+            'hat': 'hat',
+            'crown': 'hat',
+            'bow': 'hat',
+            'glasses': 'accessory',
+            'scarf': 'accessory',
+            'mask': 'accessory'
+        };
+
+        // Item kaufen
+        function buyItem(itemId, price, emoji) {
+            // Prüfen ob bereits besessen
+            if (ownedItems.find(item => item.id === itemId)) {
+                // Item bereits besessen - ausrüsten
+                equipItem(itemId, emoji);
+                return;
+            }
+
+            // Prüfen ob genug Gold
+            if (score < price) {
+                alert('Nicht genug Gold! Du brauchst ' + price + ' Gold.');
+                return;
+            }
+
+            // Kaufen
+            score -= price;
+            ownedItems.push({ id: itemId, emoji: emoji, type: itemTypes[itemId] });
+
+            // UI aktualisieren
+            document.getElementById('score').textContent = '💰 Gold: ' + score;
+            document.getElementById('shopGold').textContent = score;
+            document.getElementById('totalGold').textContent = score;
+
+            // Item ausrüsten
+            equipItem(itemId, emoji);
+
+            // Shop-Anzeige aktualisieren
+            updateShopDisplay();
+
+            alert('🎉 ' + emoji + ' gekauft!');
+        }
+
+        // Item ausrüsten
+        function equipItem(itemId, emoji) {
+            const type = itemTypes[itemId];
+
+            if (type === 'hat') {
+                equippedHat = { id: itemId, emoji: emoji };
+                document.getElementById('equippedHat').textContent = emoji;
+            } else {
+                equippedAccessory = { id: itemId, emoji: emoji };
+                document.getElementById('equippedAccessory').textContent = emoji;
+            }
+
+            updateOwnedItemsDisplay();
+        }
+
+        // Alle Items ablegen
+        function removeAllItems() {
+            equippedHat = null;
+            equippedAccessory = null;
+            document.getElementById('equippedHat').textContent = '';
+            document.getElementById('equippedAccessory').textContent = '';
+            updateOwnedItemsDisplay();
+        }
+
+        // Shop-Anzeige aktualisieren
+        function updateShopDisplay() {
+            document.getElementById('shopGold').textContent = score;
+
+            // Gekaufte Items markieren
+            document.querySelectorAll('.avatar-item').forEach(item => {
+                item.classList.remove('owned');
+            });
+
+            ownedItems.forEach(item => {
+                const items = document.querySelectorAll('.avatar-item');
+                items.forEach(el => {
+                    if (el.onclick && el.onclick.toString().includes(item.id)) {
+                        el.classList.add('owned');
+                    }
+                });
+            });
+
+            updateOwnedItemsDisplay();
+        }
+
+        // Besessene Items anzeigen
+        function updateOwnedItemsDisplay() {
+            const container = document.getElementById('ownedItems');
+
+            if (ownedItems.length === 0) {
+                container.innerHTML = '<p style="color: #888; font-size: 14px;">Noch keine Items gekauft</p>';
+                return;
+            }
+
+            container.innerHTML = '<p style="font-size: 12px; color: #666; margin-bottom: 5px;">Klicke zum Ausrüsten:</p>';
+            ownedItems.forEach(item => {
+                const isEquipped = (equippedHat && equippedHat.id === item.id) ||
+                                   (equippedAccessory && equippedAccessory.id === item.id);
+                const span = document.createElement('span');
+                span.className = 'owned-item' + (isEquipped ? ' equipped' : '');
+                span.textContent = item.emoji;
+                span.onclick = () => equipItem(item.id, item.emoji);
+                container.appendChild(span);
+            });
+        }
+
+        // ==================== GAME CODE ====================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Spiel-Variablen
+        let score = 0;
+        let gameTime = 120; // 2 Minuten in Sekunden
+        let gameRunning = true;
+        let gameStartTime = Date.now();
+
+        // Cappybara Spieler
+        const player = {
+            x: 100,
+            y: 400,
+            width: 60,
+            height: 60,
+            velocityX: 0,
+            velocityY: 0,
+            speed: 5,
+            jumpPower: 15,
+            gravity: 0.6,
+            onGround: false
+        };
+
+        // Cappybara Bild laden
+        const cappybaraImg = new Image();
+        cappybaraImg.src = 'Cappybara.jpg';
+
+        // Goldstücke
+        let coins = [];
+        const coinRadius = 15;
+
+        // Plattformen
+        const platforms = [
+            { x: 0, y: 500, width: 800, height: 100 }, // Boden
+            { x: 200, y: 400, width: 150, height: 20 },
+            { x: 450, y: 350, width: 150, height: 20 },
+            { x: 100, y: 250, width: 150, height: 20 },
+            { x: 550, y: 200, width: 150, height: 20 }
+        ];
+
+        // Musik
+        const bgMusic = document.getElementById('bgMusic');
+        let musicStarted = false;
+
+        function startMusic() {
+            if (!musicStarted) {
+                bgMusic.play().catch(e => console.log('Autoplay blockiert. Klicken Sie zum Starten.'));
+                musicStarted = true;
+            }
+        }
+
+        // Initialisierung
+        function init() {
+            // Spiel wird erst gestartet wenn Benutzer es auswählt
+            gameRunning = false;
+            // Musik beim ersten Tastendruck starten
+            window.addEventListener('keydown', startMusic, { once: true });
+            window.addEventListener('click', startMusic, { once: true });
+        }
+
+        // Goldstücke spawnen
+        function spawnCoins() {
+            coins = [];
+            // Münzen auf Plattformen
+            platforms.forEach((platform, index) => {
+                if (index > 0) { // Nicht auf dem Boden
+                    const numCoins = Math.floor(Math.random() * 3) + 2;
+                    for (let i = 0; i < numCoins; i++) {
+                        coins.push({
+                            x: platform.x + Math.random() * (platform.width - 30) + 15,
+                            y: platform.y - 30,
+                            collected: false
+                        });
+                    }
+                }
+            });
+            // Zusätzliche Münzen in der Luft
+            for (let i = 0; i < 5; i++) {
+                coins.push({
+                    x: Math.random() * 750 + 25,
+                    y: Math.random() * 300 + 50,
+                    collected: false
+                });
+            }
+        }
+
+        // Timer
+        function startTimer() {
+            const timerInterval = setInterval(() => {
+                if (!gameRunning) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+
+                // Pausenzeit nicht mitzählen
+                if (gamePaused) return;
+
+                const elapsed = Math.floor((Date.now() - gameStartTime - totalPausedTime) / 1000);
+                const remaining = Math.max(0, gameTime - elapsed);
+
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
+                document.getElementById('time').textContent =
+                    `⏱️ Zeit: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                if (remaining <= 0) {
+                    endGame();
+                }
+            }, 100);
+        }
+
+        // Tastatur-Steuerung
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+
+            // Springen
+            if ((e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') && player.onGround) {
+                player.velocityY = -player.jumpPower;
+                player.onGround = false;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // Spieler aktualisieren
+        function updatePlayer() {
+            // Horizontale Bewegung
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                player.velocityX = -player.speed;
+            } else if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                player.velocityX = player.speed;
+            } else {
+                player.velocityX = 0;
+            }
+
+            // Gravitation
+            player.velocityY += player.gravity;
+
+            // Position aktualisieren
+            player.x += player.velocityX;
+            player.y += player.velocityY;
+
+            // Bildschirmgrenzen
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+            // Plattform-Kollision
+            player.onGround = false;
+            platforms.forEach(platform => {
+                // Prüfe ob horizontal überlappend
+                const overlapX = player.x + player.width > platform.x &&
+                                 player.x < platform.x + platform.width;
+
+                // Prüfe ob vertikal überlappend
+                const overlapY = player.y + player.height > platform.y &&
+                                 player.y < platform.y + platform.height;
+
+                if (overlapX && overlapY) {
+                    // Berechne Überlappungstiefe für jede Richtung
+                    const overlapBottom = player.y + player.height - platform.y;
+                    const overlapTop = platform.y + platform.height - player.y;
+                    const overlapLeft = player.x + player.width - platform.x;
+                    const overlapRight = platform.x + platform.width - player.x;
+
+                    // Finde die kleinste Überlappung
+                    const minOverlap = Math.min(overlapBottom, overlapTop, overlapLeft, overlapRight);
+
+                    if (minOverlap === overlapBottom && player.velocityY >= 0) {
+                        // Landung von oben
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                        player.onGround = true;
+                    } else if (minOverlap === overlapTop && player.velocityY < 0) {
+                        // Kopf stößt von unten - abprallen
+                        player.y = platform.y + platform.height;
+                        player.velocityY = Math.abs(player.velocityY) * 0.5; // Bounce zurück
+                    } else if (minOverlap === overlapLeft) {
+                        // Kollision von links
+                        player.x = platform.x - player.width;
+                    } else if (minOverlap === overlapRight) {
+                        // Kollision von rechts
+                        player.x = platform.x + platform.width;
+                    }
+                }
+            });
+
+            // Münzen sammeln
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    const dx = player.x + player.width / 2 - coin.x;
+                    const dy = player.y + player.height / 2 - coin.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < coinRadius + 30) {
+                        coin.collected = true;
+                        score++;
+                        document.getElementById('score').textContent = `💰 Gold: ${score}`;
+
+                        // Neue Münze spawnen
+                        setTimeout(() => {
+                            coin.x = Math.random() * 750 + 25;
+                            coin.y = Math.random() * 300 + 50;
+                            coin.collected = false;
+                        }, 2000);
+                    }
+                }
+            });
+        }
+
+        // Zeichnen
+        function draw() {
+            // Hintergrund (Himmel und Gras)
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.7, '#90EE90');
+            gradient.addColorStop(0.7, '#8B7355');
+            gradient.addColorStop(1, '#654321');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Wolken
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.arc(100, 80, 30, 0, Math.PI * 2);
+            ctx.arc(130, 80, 40, 0, Math.PI * 2);
+            ctx.arc(160, 80, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(500, 120, 25, 0, Math.PI * 2);
+            ctx.arc(525, 120, 35, 0, Math.PI * 2);
+            ctx.arc(550, 120, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Plattformen
+            platforms.forEach((platform, index) => {
+                if (index === 0) {
+                    // Boden - Gras-Textur
+                    ctx.fillStyle = '#4a7c29';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+
+                    // Gras-Details
+                    ctx.strokeStyle = '#5a9639';
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < platform.width; i += 10) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x + i, platform.y);
+                        ctx.lineTo(platform.x + i + 3, platform.y - 5);
+                        ctx.stroke();
+                    }
+                } else {
+                    // Schwebende Plattformen
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+
+                    ctx.fillStyle = '#4a7c29';
+                    ctx.fillRect(platform.x, platform.y, platform.width, 5);
+                }
+            });
+
+            // Goldstücke
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    // Goldmünze mit Animation
+                    const pulse = Math.sin(Date.now() / 200) * 2;
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.arc(coin.x, coin.y, coinRadius + pulse, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#FFA500';
+                    ctx.beginPath();
+                    ctx.arc(coin.x, coin.y, coinRadius - 5 + pulse, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Glanz-Effekt
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(coin.x - 3, coin.y - 3, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            // Cappybara Spieler
+            if (cappybaraImg.complete) {
+                ctx.drawImage(cappybaraImg, player.x, player.y, player.width, player.height);
+            } else {
+                // Fallback, falls Bild nicht geladen
+                ctx.fillStyle = '#D2691E';
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+            }
+
+            // Schatten unter dem Spieler
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(player.x + player.width / 2, player.y + player.height + 2,
+                       player.width / 2, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Spiel-Loop
+        function gameLoop() {
+            if (!gameRunning) return;
+            if (gamePaused) return;
+
+            updatePlayer();
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Spiel beenden
+        function endGame() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent =
+                `Du hast ${score} Goldstücke gesammelt!`;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // Spiel neustarten
+        function restartGame() {
+            score = 0;
+            gameTime = 120;
+            gameRunning = true;
+            gamePaused = false;
+            totalPausedTime = 0;
+            gameStartTime = Date.now();
+            player.x = 100;
+            player.y = 400;
+            player.velocityX = 0;
+            player.velocityY = 0;
+
+            document.getElementById('score').textContent = '💰 Gold: 0';
+            document.getElementById('gameOver').style.display = 'none';
+
+            // Musik weiterspielen
+            bgMusic.play();
+
+            spawnCoins();
+            startTimer();
+            gameLoop();
+        }
+
+        // Spiel starten
+        init();
+
+        // ==================== TWO PLAYER RUN GAME ====================
+        const tpCanvas = document.getElementById('twoPlayerCanvas');
+        const tpCtx = tpCanvas.getContext('2d');
+
+        let twoPlayerRunning = false;
+        let twoPlayerPaused = false;
+        let tpGameSpeed = 5;
+        let tpDistance = 0;
+        let tpFinishLine = 3000; // Ziellinie
+
+        // Spieler für Two Player
+        const tp1 = {
+            x: 100,
+            y: 280,
+            width: 50,
+            height: 50,
+            velocityY: 0,
+            jumpPower: 12,
+            gravity: 0.5,
+            onGround: true,
+            alive: true,
+            color: '#4CAF50',
+            name: 'Spieler 1'
+        };
+
+        const tp2 = {
+            x: 100,
+            y: 180,
+            width: 50,
+            height: 50,
+            velocityY: 0,
+            jumpPower: 12,
+            gravity: 0.5,
+            onGround: true,
+            alive: true,
+            color: '#2196F3',
+            name: 'Spieler 2'
+        };
+
+        // Hindernisse
+        let tpObstacles = [];
+        let tpNextObstacle = 0;
+
+        // Cappybara Bild für Two Player
+        const tpCappybaraImg = new Image();
+        tpCappybaraImg.src = 'Cappybara.jpg';
+
+        // Two Player Tastatur
+        const tpKeys = {};
+        window.addEventListener('keydown', (e) => {
+            tpKeys[e.key] = true;
+
+            // Spieler 1 springt mit W
+            if ((e.key === 'w' || e.key === 'W') && tp1.onGround && tp1.alive && twoPlayerRunning) {
+                tp1.velocityY = -tp1.jumpPower;
+                tp1.onGround = false;
+            }
+
+            // Spieler 2 springt mit ArrowUp
+            if (e.key === 'ArrowUp' && tp2.onGround && tp2.alive && twoPlayerRunning) {
+                tp2.velocityY = -tp2.jumpPower;
+                tp2.onGround = false;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            tpKeys[e.key] = false;
+        });
+
+        // Two Player Spiel starten
+        function startTwoPlayerGame() {
+            twoPlayerRunning = true;
+            twoPlayerPaused = false;
+            tpGameSpeed = 5;
+            tpDistance = 0;
+            tpObstacles = [];
+            tpNextObstacle = 200;
+
+            // Spieler zurücksetzen
+            tp1.y = 280;
+            tp1.velocityY = 0;
+            tp1.onGround = true;
+            tp1.alive = true;
+
+            tp2.y = 180;
+            tp2.velocityY = 0;
+            tp2.onGround = true;
+            tp2.alive = true;
+
+            document.getElementById('twoPlayerGameOver').style.display = 'none';
+            document.getElementById('player1Score').textContent = '🟢 Spieler 1: Läuft!';
+            document.getElementById('player2Score').textContent = '🔵 Spieler 2: Läuft!';
+
+            twoPlayerLoop();
+        }
+
+        // Two Player pausieren
+        function pauseTwoPlayer() {
+            twoPlayerPaused = true;
+        }
+
+        // Two Player fortsetzen
+        function resumeTwoPlayer() {
+            if (twoPlayerPaused && twoPlayerRunning) {
+                twoPlayerPaused = false;
+                twoPlayerLoop();
+            }
+        }
+
+        // Hindernis spawnen
+        function spawnTpObstacle() {
+            const lane = Math.random() < 0.5 ? 1 : 2; // Bahn 1 (oben) oder Bahn 2 (unten)
+            const y = lane === 1 ? 180 : 280;
+
+            tpObstacles.push({
+                x: tpCanvas.width + 50,
+                y: y,
+                width: 30 + Math.random() * 20,
+                height: 40,
+                lane: lane
+            });
+        }
+
+        // Two Player Update
+        function updateTwoPlayer() {
+            // Distanz erhöhen
+            tpDistance += tpGameSpeed;
+
+            // Geschwindigkeit erhöhen
+            tpGameSpeed = 5 + Math.floor(tpDistance / 500) * 0.5;
+
+            // Spieler 1 Physik
+            if (tp1.alive) {
+                tp1.velocityY += tp1.gravity;
+                tp1.y += tp1.velocityY;
+
+                // Boden Kollision (Bahn 2)
+                if (tp1.y >= 280) {
+                    tp1.y = 280;
+                    tp1.velocityY = 0;
+                    tp1.onGround = true;
+                }
+            }
+
+            // Spieler 2 Physik
+            if (tp2.alive) {
+                tp2.velocityY += tp2.gravity;
+                tp2.y += tp2.velocityY;
+
+                // Boden Kollision (Bahn 1)
+                if (tp2.y >= 180) {
+                    tp2.y = 180;
+                    tp2.velocityY = 0;
+                    tp2.onGround = true;
+                }
+            }
+
+            // Hindernisse spawnen
+            if (tpDistance >= tpNextObstacle) {
+                spawnTpObstacle();
+                tpNextObstacle = tpDistance + 150 + Math.random() * 200;
+            }
+
+            // Hindernisse bewegen und Kollision prüfen
+            for (let i = tpObstacles.length - 1; i >= 0; i--) {
+                tpObstacles[i].x -= tpGameSpeed;
+
+                // Kollision mit Spieler 1 (Bahn 2)
+                if (tp1.alive && tpObstacles[i].lane === 2) {
+                    if (tp1.x + tp1.width > tpObstacles[i].x &&
+                        tp1.x < tpObstacles[i].x + tpObstacles[i].width &&
+                        tp1.y + tp1.height > tpObstacles[i].y) {
+                        tp1.alive = false;
+                        document.getElementById('player1Score').textContent = '🟢 Spieler 1: Ausgeschieden!';
+                    }
+                }
+
+                // Kollision mit Spieler 2 (Bahn 1)
+                if (tp2.alive && tpObstacles[i].lane === 1) {
+                    if (tp2.x + tp2.width > tpObstacles[i].x &&
+                        tp2.x < tpObstacles[i].x + tpObstacles[i].width &&
+                        tp2.y + tp2.height > tpObstacles[i].y) {
+                        tp2.alive = false;
+                        document.getElementById('player2Score').textContent = '🔵 Spieler 2: Ausgeschieden!';
+                    }
+                }
+
+                // Hindernis entfernen wenn außerhalb
+                if (tpObstacles[i].x + tpObstacles[i].width < 0) {
+                    tpObstacles.splice(i, 1);
+                }
+            }
+
+            // Spiel beenden?
+            if (!tp1.alive && !tp2.alive) {
+                endTwoPlayer('Unentschieden!', 'Beide Spieler sind ausgeschieden.');
+            } else if (tpDistance >= tpFinishLine) {
+                if (tp1.alive && tp2.alive) {
+                    endTwoPlayer('Unentschieden!', 'Beide haben das Ziel erreicht!');
+                } else if (tp1.alive) {
+                    endTwoPlayer('🟢 Spieler 1 gewinnt!', 'Spieler 1 hat das Ziel erreicht!');
+                } else {
+                    endTwoPlayer('🔵 Spieler 2 gewinnt!', 'Spieler 2 hat das Ziel erreicht!');
+                }
+            } else if (!tp1.alive && tp2.alive) {
+                // Spieler 2 noch im Rennen
+            } else if (tp1.alive && !tp2.alive) {
+                // Spieler 1 noch im Rennen
+            }
+        }
+
+        // Two Player zeichnen
+        function drawTwoPlayer() {
+            // Hintergrund
+            const gradient = tpCtx.createLinearGradient(0, 0, 0, tpCanvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#90EE90');
+            tpCtx.fillStyle = gradient;
+            tpCtx.fillRect(0, 0, tpCanvas.width, tpCanvas.height);
+
+            // Bahnen zeichnen
+            tpCtx.fillStyle = '#8B7355';
+            tpCtx.fillRect(0, 230, tpCanvas.width, 5); // Trennlinie
+
+            tpCtx.fillStyle = 'rgba(139, 115, 85, 0.3)';
+            tpCtx.fillRect(0, 130, tpCanvas.width, 100); // Bahn 1
+            tpCtx.fillRect(0, 235, tpCanvas.width, 100); // Bahn 2
+
+            // Bahn-Beschriftungen
+            tpCtx.fillStyle = 'rgba(0,0,0,0.3)';
+            tpCtx.font = '14px Arial';
+            tpCtx.fillText('Bahn 2 (Spieler 2 - Pfeil Hoch)', 10, 145);
+            tpCtx.fillText('Bahn 1 (Spieler 1 - W)', 10, 250);
+
+            // Fortschrittsbalken
+            const progress = Math.min(tpDistance / tpFinishLine, 1);
+            tpCtx.fillStyle = '#ddd';
+            tpCtx.fillRect(50, 50, tpCanvas.width - 100, 20);
+            tpCtx.fillStyle = '#4CAF50';
+            tpCtx.fillRect(50, 50, (tpCanvas.width - 100) * progress, 20);
+            tpCtx.strokeStyle = '#333';
+            tpCtx.strokeRect(50, 50, tpCanvas.width - 100, 20);
+            tpCtx.fillStyle = '#333';
+            tpCtx.fillText('🏁 ' + Math.floor(progress * 100) + '%', tpCanvas.width / 2 - 30, 65);
+
+            // Hindernisse zeichnen
+            tpObstacles.forEach(obs => {
+                tpCtx.fillStyle = '#DC143C';
+                tpCtx.fillRect(obs.x, obs.y, obs.width, obs.height);
+
+                // Stacheln
+                tpCtx.fillStyle = '#8B0000';
+                for (let i = 0; i < obs.width; i += 10) {
+                    tpCtx.beginPath();
+                    tpCtx.moveTo(obs.x + i, obs.y);
+                    tpCtx.lineTo(obs.x + i + 5, obs.y - 10);
+                    tpCtx.lineTo(obs.x + i + 10, obs.y);
+                    tpCtx.fill();
+                }
+            });
+
+            // Spieler 1 zeichnen
+            if (tp1.alive) {
+                if (tpCappybaraImg.complete) {
+                    tpCtx.drawImage(tpCappybaraImg, tp1.x, tp1.y, tp1.width, tp1.height);
+                } else {
+                    tpCtx.fillStyle = tp1.color;
+                    tpCtx.fillRect(tp1.x, tp1.y, tp1.width, tp1.height);
+                }
+                // Spieler 1 Markierung
+                tpCtx.fillStyle = tp1.color;
+                tpCtx.beginPath();
+                tpCtx.arc(tp1.x + tp1.width / 2, tp1.y - 10, 8, 0, Math.PI * 2);
+                tpCtx.fill();
+                tpCtx.fillStyle = 'white';
+                tpCtx.font = 'bold 10px Arial';
+                tpCtx.fillText('1', tp1.x + tp1.width / 2 - 3, tp1.y - 6);
+            }
+
+            // Spieler 2 zeichnen
+            if (tp2.alive) {
+                if (tpCappybaraImg.complete) {
+                    tpCtx.drawImage(tpCappybaraImg, tp2.x, tp2.y, tp2.width, tp2.height);
+                } else {
+                    tpCtx.fillStyle = tp2.color;
+                    tpCtx.fillRect(tp2.x, tp2.y, tp2.width, tp2.height);
+                }
+                // Spieler 2 Markierung
+                tpCtx.fillStyle = tp2.color;
+                tpCtx.beginPath();
+                tpCtx.arc(tp2.x + tp2.width / 2, tp2.y - 10, 8, 0, Math.PI * 2);
+                tpCtx.fill();
+                tpCtx.fillStyle = 'white';
+                tpCtx.font = 'bold 10px Arial';
+                tpCtx.fillText('2', tp2.x + tp2.width / 2 - 3, tp2.y - 6);
+            }
+
+            // Boden
+            tpCtx.fillStyle = '#4a7c29';
+            tpCtx.fillRect(0, 335, tpCanvas.width, 65);
+        }
+
+        // Two Player Spiel-Loop
+        function twoPlayerLoop() {
+            if (!twoPlayerRunning) return;
+            if (twoPlayerPaused) return;
+
+            updateTwoPlayer();
+            drawTwoPlayer();
+
+            requestAnimationFrame(twoPlayerLoop);
+        }
+
+        // Two Player beenden
+        function endTwoPlayer(winner, result) {
+            twoPlayerRunning = false;
+            document.getElementById('twoPlayerWinner').textContent = winner;
+            document.getElementById('twoPlayerResult').textContent = result;
+            document.getElementById('twoPlayerGameOver').style.display = 'block';
+        }
+
+        // Two Player neustarten
+        function restartTwoPlayer() {
+            startTwoPlayerGame();
+        }
+
+        // ==================== SCHNEEBALLSCHLACHT GAME ====================
+        const sbCanvas = document.getElementById('snowballCanvas');
+        const sbCtx = sbCanvas.getContext('2d');
+
+        let snowballRunning = false;
+        let snowballPaused = false;
+        let snowballMode = 'human'; // 'human' oder 'ai'
+
+        // Cappybara Spieler (links)
+        const sbCappy = {
+            x: 80,
+            y: 200,
+            width: 70,
+            height: 70,
+            speed: 5,
+            lives: 3,
+            canThrow: true,
+            throwCooldown: 0
+        };
+
+        // Schneemann (rechts)
+        const sbSnowman = {
+            x: 750,
+            y: 200,
+            width: 70,
+            height: 90,
+            speed: 4,
+            lives: 3,
+            canThrow: true,
+            throwCooldown: 0
+        };
+
+        // Schneebälle
+        let sbSnowballs = [];
+
+        // AI Variablen
+        let aiThrowTimer = 0;
+        let aiMoveTarget = 250;
+
+        // Cappybara Bild für Schneeballschlacht
+        const sbCappyImg = new Image();
+        sbCappyImg.src = 'Cappybara.jpg';
+
+        // Tastatur für Schneeballschlacht
+        const sbKeys = {};
+
+        // Schneeballschlacht starten (zeigt Modus-Auswahl)
+        function startSnowballFight() {
+            homePage.classList.add('hidden');
+            snowballContainer.style.display = 'block';
+            currentGame = 'snowball';
+            document.getElementById('snowballModeSelect').style.display = 'block';
+            document.getElementById('snowballGameOver').style.display = 'none';
+            startMusic();
+        }
+
+        // Modus auswählen und Spiel starten
+        function selectSnowballMode(mode) {
+            snowballMode = mode;
+            document.getElementById('snowballModeSelect').style.display = 'none';
+
+            // Instruktionen anpassen
+            if (mode === 'ai') {
+                document.getElementById('snowballInstructions').textContent =
+                    'Cappybara: W/S bewegen, D werfen • Schneemann wird von AI gesteuert';
+            } else {
+                document.getElementById('snowballInstructions').textContent =
+                    'Cappybara: W/S bewegen, D werfen • Schneemann: ↑/↓ bewegen, ← werfen';
+            }
+
+            initSnowballGame();
+        }
+
+        // Spiel initialisieren
+        function initSnowballGame() {
+            snowballRunning = true;
+            snowballPaused = false;
+
+            // Spieler zurücksetzen
+            sbCappy.y = 200;
+            sbCappy.lives = 3;
+            sbCappy.canThrow = true;
+            sbCappy.throwCooldown = 0;
+
+            sbSnowman.y = 200;
+            sbSnowman.lives = 3;
+            sbSnowman.canThrow = true;
+            sbSnowman.throwCooldown = 0;
+
+            sbSnowballs = [];
+            aiThrowTimer = 0;
+            aiMoveTarget = 250;
+
+            updateSnowballLives();
+            snowballLoop();
+        }
+
+        // Pause
+        function pauseSnowball() {
+            snowballPaused = true;
+        }
+
+        // Leben anzeigen
+        function updateSnowballLives() {
+            let hearts1 = '';
+            let hearts2 = '';
+            for (let i = 0; i < 3; i++) {
+                hearts1 += i < sbCappy.lives ? '❤️' : '🖤';
+                hearts2 += i < sbSnowman.lives ? '❤️' : '🖤';
+            }
+            document.getElementById('snowballP1').textContent = hearts1 + ' Cappybara';
+            document.getElementById('snowballP2').textContent = 'Schneemann ' + hearts2;
+        }
+
+        // Schneeball werfen
+        function throwSnowballFromPlayer(player) {
+            if (player === 'cappy' && sbCappy.canThrow) {
+                sbSnowballs.push({
+                    x: sbCappy.x + sbCappy.width,
+                    y: sbCappy.y + sbCappy.height / 2,
+                    vx: 10,
+                    owner: 'cappy'
+                });
+                sbCappy.canThrow = false;
+                sbCappy.throwCooldown = 30;
+            } else if (player === 'snowman' && sbSnowman.canThrow) {
+                sbSnowballs.push({
+                    x: sbSnowman.x,
+                    y: sbSnowman.y + sbSnowman.height / 2,
+                    vx: -10,
+                    owner: 'snowman'
+                });
+                sbSnowman.canThrow = false;
+                sbSnowman.throwCooldown = 30;
+            }
+        }
+
+        // Tastatur-Events
+        window.addEventListener('keydown', (e) => {
+            sbKeys[e.key] = true;
+
+            // Cappybara wirft mit D
+            if ((e.key === 'd' || e.key === 'D') && snowballRunning && !snowballPaused) {
+                throwSnowballFromPlayer('cappy');
+            }
+
+            // Schneemann wirft mit ArrowLeft (nur im Human-Modus)
+            if (e.key === 'ArrowLeft' && snowballMode === 'human' && snowballRunning && !snowballPaused) {
+                throwSnowballFromPlayer('snowman');
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            sbKeys[e.key] = false;
+        });
+
+        // AI-Logik
+        function snowballAI() {
+            // Bewegung: Verfolge Cappybara mit etwas Verzögerung
+            if (Math.random() < 0.02) {
+                aiMoveTarget = sbCappy.y + (Math.random() - 0.5) * 100;
+            }
+
+            // Bewegung zum Ziel
+            if (sbSnowman.y < aiMoveTarget - 10) {
+                sbSnowman.y += sbSnowman.speed * 0.7;
+            } else if (sbSnowman.y > aiMoveTarget + 10) {
+                sbSnowman.y -= sbSnowman.speed * 0.7;
+            }
+
+            // Grenzen
+            if (sbSnowman.y < 100) sbSnowman.y = 100;
+            if (sbSnowman.y > sbCanvas.height - sbSnowman.height - 50) {
+                sbSnowman.y = sbCanvas.height - sbSnowman.height - 50;
+            }
+
+            // Werfen
+            aiThrowTimer++;
+            if (aiThrowTimer > 60 + Math.random() * 60 && sbSnowman.canThrow) {
+                throwSnowballFromPlayer('snowman');
+                aiThrowTimer = 0;
+            }
+        }
+
+        // Update
+        function updateSnowball() {
+            // Cooldowns
+            if (!sbCappy.canThrow) {
+                sbCappy.throwCooldown--;
+                if (sbCappy.throwCooldown <= 0) sbCappy.canThrow = true;
+            }
+            if (!sbSnowman.canThrow) {
+                sbSnowman.throwCooldown--;
+                if (sbSnowman.throwCooldown <= 0) sbSnowman.canThrow = true;
+            }
+
+            // Cappybara Bewegung
+            if (sbKeys['w'] || sbKeys['W']) {
+                sbCappy.y -= sbCappy.speed;
+            }
+            if (sbKeys['s'] || sbKeys['S']) {
+                sbCappy.y += sbCappy.speed;
+            }
+
+            // Cappybara Grenzen
+            if (sbCappy.y < 100) sbCappy.y = 100;
+            if (sbCappy.y > sbCanvas.height - sbCappy.height - 50) {
+                sbCappy.y = sbCanvas.height - sbCappy.height - 50;
+            }
+
+            // Schneemann Bewegung (Human-Modus)
+            if (snowballMode === 'human') {
+                if (sbKeys['ArrowUp']) {
+                    sbSnowman.y -= sbSnowman.speed;
+                }
+                if (sbKeys['ArrowDown']) {
+                    sbSnowman.y += sbSnowman.speed;
+                }
+
+                // Grenzen
+                if (sbSnowman.y < 100) sbSnowman.y = 100;
+                if (sbSnowman.y > sbCanvas.height - sbSnowman.height - 50) {
+                    sbSnowman.y = sbCanvas.height - sbSnowman.height - 50;
+                }
+            } else {
+                // AI-Modus
+                snowballAI();
+            }
+
+            // Schneebälle bewegen
+            for (let i = sbSnowballs.length - 1; i >= 0; i--) {
+                sbSnowballs[i].x += sbSnowballs[i].vx;
+
+                // Kollision mit Cappybara
+                if (sbSnowballs[i].owner === 'snowman') {
+                    if (sbSnowballs[i].x < sbCappy.x + sbCappy.width &&
+                        sbSnowballs[i].x > sbCappy.x &&
+                        sbSnowballs[i].y > sbCappy.y &&
+                        sbSnowballs[i].y < sbCappy.y + sbCappy.height) {
+                        sbCappy.lives--;
+                        sbSnowballs.splice(i, 1);
+                        updateSnowballLives();
+                        continue;
+                    }
+                }
+
+                // Kollision mit Schneemann
+                if (sbSnowballs[i].owner === 'cappy') {
+                    if (sbSnowballs[i].x > sbSnowman.x &&
+                        sbSnowballs[i].x < sbSnowman.x + sbSnowman.width &&
+                        sbSnowballs[i].y > sbSnowman.y &&
+                        sbSnowballs[i].y < sbSnowman.y + sbSnowman.height) {
+                        sbSnowman.lives--;
+                        sbSnowballs.splice(i, 1);
+                        updateSnowballLives();
+                        continue;
+                    }
+                }
+
+                // Außerhalb des Bildschirms
+                if (sbSnowballs[i].x < 0 || sbSnowballs[i].x > sbCanvas.width) {
+                    sbSnowballs.splice(i, 1);
+                }
+            }
+
+            // Gewinner prüfen
+            if (sbCappy.lives <= 0) {
+                endSnowballGame('snowman');
+            } else if (sbSnowman.lives <= 0) {
+                endSnowballGame('cappy');
+            }
+        }
+
+        // Schneemann zeichnen
+        function drawSnowman(x, y, width, height) {
+            // Körper (3 Kugeln)
+            sbCtx.fillStyle = 'white';
+            sbCtx.strokeStyle = '#ccc';
+            sbCtx.lineWidth = 2;
+
+            // Untere Kugel
+            sbCtx.beginPath();
+            sbCtx.arc(x + width/2, y + height - 20, 25, 0, Math.PI * 2);
+            sbCtx.fill();
+            sbCtx.stroke();
+
+            // Mittlere Kugel
+            sbCtx.beginPath();
+            sbCtx.arc(x + width/2, y + height - 55, 20, 0, Math.PI * 2);
+            sbCtx.fill();
+            sbCtx.stroke();
+
+            // Kopf
+            sbCtx.beginPath();
+            sbCtx.arc(x + width/2, y + height - 85, 15, 0, Math.PI * 2);
+            sbCtx.fill();
+            sbCtx.stroke();
+
+            // Hut
+            sbCtx.fillStyle = '#333';
+            sbCtx.fillRect(x + width/2 - 15, y + 5, 30, 5);
+            sbCtx.fillRect(x + width/2 - 10, y - 15, 20, 20);
+
+            // Augen
+            sbCtx.fillStyle = 'black';
+            sbCtx.beginPath();
+            sbCtx.arc(x + width/2 - 5, y + height - 88, 3, 0, Math.PI * 2);
+            sbCtx.arc(x + width/2 + 5, y + height - 88, 3, 0, Math.PI * 2);
+            sbCtx.fill();
+
+            // Nase (Karotte)
+            sbCtx.fillStyle = 'orange';
+            sbCtx.beginPath();
+            sbCtx.moveTo(x + width/2, y + height - 82);
+            sbCtx.lineTo(x + width/2 - 15, y + height - 80);
+            sbCtx.lineTo(x + width/2, y + height - 78);
+            sbCtx.fill();
+
+            // Knöpfe
+            sbCtx.fillStyle = 'black';
+            sbCtx.beginPath();
+            sbCtx.arc(x + width/2, y + height - 50, 3, 0, Math.PI * 2);
+            sbCtx.arc(x + width/2, y + height - 60, 3, 0, Math.PI * 2);
+            sbCtx.fill();
+
+            // Arme
+            sbCtx.strokeStyle = '#8B4513';
+            sbCtx.lineWidth = 3;
+            sbCtx.beginPath();
+            sbCtx.moveTo(x + width/2 - 20, y + height - 55);
+            sbCtx.lineTo(x - 10, y + height - 45);
+            sbCtx.moveTo(x + width/2 + 20, y + height - 55);
+            sbCtx.lineTo(x + width + 10, y + height - 45);
+            sbCtx.stroke();
+        }
+
+        // Zeichnen
+        function drawSnowball() {
+            // Winter-Hintergrund
+            const gradient = sbCtx.createLinearGradient(0, 0, 0, sbCanvas.height);
+            gradient.addColorStop(0, '#a8d4e6');
+            gradient.addColorStop(0.6, '#d0e8f2');
+            gradient.addColorStop(1, '#ffffff');
+            sbCtx.fillStyle = gradient;
+            sbCtx.fillRect(0, 0, sbCanvas.width, sbCanvas.height);
+
+            // Schneeflocken (Dekoration)
+            sbCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 73 + Date.now() / 50) % sbCanvas.width;
+                const y = (i * 47 + Date.now() / 30) % (sbCanvas.height - 100) + 50;
+                sbCtx.beginPath();
+                sbCtx.arc(x, y, 2 + (i % 3), 0, Math.PI * 2);
+                sbCtx.fill();
+            }
+
+            // Boden (Schnee)
+            sbCtx.fillStyle = '#f0f8ff';
+            sbCtx.fillRect(0, sbCanvas.height - 50, sbCanvas.width, 50);
+
+            // Schneehügel
+            sbCtx.fillStyle = '#e8f4f8';
+            sbCtx.beginPath();
+            sbCtx.moveTo(0, sbCanvas.height - 50);
+            sbCtx.quadraticCurveTo(150, sbCanvas.height - 80, 300, sbCanvas.height - 50);
+            sbCtx.quadraticCurveTo(450, sbCanvas.height - 70, 600, sbCanvas.height - 50);
+            sbCtx.quadraticCurveTo(750, sbCanvas.height - 90, 900, sbCanvas.height - 50);
+            sbCtx.lineTo(900, sbCanvas.height);
+            sbCtx.lineTo(0, sbCanvas.height);
+            sbCtx.fill();
+
+            // Cappybara zeichnen
+            if (sbCappyImg.complete) {
+                sbCtx.drawImage(sbCappyImg, sbCappy.x, sbCappy.y, sbCappy.width, sbCappy.height);
+            } else {
+                sbCtx.fillStyle = '#D2691E';
+                sbCtx.fillRect(sbCappy.x, sbCappy.y, sbCappy.width, sbCappy.height);
+            }
+
+            // Schneemann zeichnen
+            drawSnowman(sbSnowman.x, sbSnowman.y, sbSnowman.width, sbSnowman.height);
+
+            // Schneebälle zeichnen
+            sbSnowballs.forEach(ball => {
+                sbCtx.fillStyle = 'white';
+                sbCtx.strokeStyle = '#ccc';
+                sbCtx.lineWidth = 2;
+                sbCtx.beginPath();
+                sbCtx.arc(ball.x, ball.y, 10, 0, Math.PI * 2);
+                sbCtx.fill();
+                sbCtx.stroke();
+
+                // Glanz
+                sbCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                sbCtx.beginPath();
+                sbCtx.arc(ball.x - 3, ball.y - 3, 3, 0, Math.PI * 2);
+                sbCtx.fill();
+            });
+
+            // Cooldown-Anzeige
+            if (!sbCappy.canThrow) {
+                sbCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                sbCtx.fillRect(sbCappy.x, sbCappy.y - 10, sbCappy.width * (sbCappy.throwCooldown / 30), 5);
+            }
+            if (!sbSnowman.canThrow) {
+                sbCtx.fillStyle = 'rgba(0, 0, 255, 0.5)';
+                sbCtx.fillRect(sbSnowman.x, sbSnowman.y - 10, sbSnowman.width * (sbSnowman.throwCooldown / 30), 5);
+            }
+
+            // Titel
+            sbCtx.fillStyle = '#8B4513';
+            sbCtx.font = 'bold 24px Arial';
+            sbCtx.textAlign = 'center';
+            sbCtx.fillText('❄️ Schneeballschlacht ❄️', sbCanvas.width / 2, 40);
+        }
+
+        // Spiel-Loop
+        function snowballLoop() {
+            if (!snowballRunning) return;
+            if (snowballPaused) return;
+
+            updateSnowball();
+            drawSnowball();
+
+            requestAnimationFrame(snowballLoop);
+        }
+
+        // Spiel beenden
+        function endSnowballGame(winner) {
+            snowballRunning = false;
+
+            if (winner === 'cappy') {
+                document.getElementById('snowballWinner').textContent = '🎉 Cappybara gewinnt!';
+                document.getElementById('snowballResult').textContent = 'Der Schneemann wurde besiegt!';
+            } else {
+                document.getElementById('snowballWinner').textContent = '⛄ Schneemann gewinnt!';
+                document.getElementById('snowballResult').textContent = 'Die Cappybara wurde besiegt!';
+            }
+
+            document.getElementById('snowballGameOver').style.display = 'block';
+        }
+
+        // Neustarten
+        function restartSnowball() {
+            document.getElementById('snowballGameOver').style.display = 'none';
+            document.getElementById('snowballModeSelect').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
