@@ -644,6 +644,109 @@
             display: none;
             z-index: 25;
         }
+
+        /* ==================== MOBILE / TOUCH OPTIMIERUNG ==================== */
+
+        /* Responsive Canvas */
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Responsive Layout für kleinere Bildschirme */
+        @media (max-width: 920px) {
+            .game-selection {
+                flex-direction: column;
+                align-items: center;
+            }
+            .game-card {
+                width: 90%;
+                max-width: 300px;
+            }
+            .shop-layout {
+                flex-direction: column;
+            }
+            .my-cappybara {
+                width: 100%;
+            }
+            .page-content {
+                width: 90%;
+                max-width: 500px;
+                padding: 20px;
+            }
+        }
+
+        /* Touch-Controls Container */
+        .touch-controls {
+            display: none;
+            position: absolute;
+            bottom: 70px;
+            left: 0;
+            right: 0;
+            padding: 0 20px;
+            justify-content: space-between;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        /* Touch-Controls auf Touch-Geräten oder kleinen Bildschirmen anzeigen */
+        @media (pointer: coarse), (max-width: 800px) {
+            .touch-controls {
+                display: flex;
+            }
+            #instructions, #twoPlayerInstructions, #snowballInstructions {
+                display: none;
+            }
+        }
+
+        /* Touch-Buttons */
+        .touch-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.8);
+            border: 3px solid #8B4513;
+            font-size: 24px;
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s, background 0.1s;
+        }
+
+        .touch-btn:active, .touch-btn.active {
+            background: rgba(139, 69, 19, 0.9);
+            color: white;
+            transform: scale(0.95);
+        }
+
+        /* Touch-Button Gruppen */
+        .touch-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .touch-group-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        /* Spieler-Markierungen für Touch-Buttons */
+        .touch-p1 {
+            background: rgba(76, 175, 80, 0.8);
+            border-color: #2E7D32;
+        }
+
+        .touch-p2 {
+            background: rgba(33, 150, 243, 0.8);
+            border-color: #1565C0;
+        }
     </style>
 </head>
 <body>
@@ -804,6 +907,16 @@
         <div id="instructions">
             Pfeiltasten oder A/D zum Bewegen • Leertaste zum Springen
         </div>
+        <!-- Touch-Controls für Jump & Run -->
+        <div class="touch-controls" id="jumpRunControls">
+            <div class="touch-group">
+                <button class="touch-btn" id="btnLeft">◀</button>
+            </div>
+            <div class="touch-group">
+                <button class="touch-btn" id="btnJump">⬆</button>
+                <button class="touch-btn" id="btnRight">▶</button>
+            </div>
+        </div>
         <div id="gameOver">
             <h1>Spiel vorbei!</h1>
             <p id="finalScore"></p>
@@ -824,6 +937,11 @@
         <div id="twoPlayerInstructions">
             Spieler 1: W zum Springen • Spieler 2: Pfeil-Hoch zum Springen
         </div>
+        <!-- Touch-Controls für Two Player Run -->
+        <div class="touch-controls" id="twoPlayerTouchControls">
+            <button class="touch-btn touch-p1" id="btnP1Jump">1⬆</button>
+            <button class="touch-btn touch-p2" id="btnP2Jump">2⬆</button>
+        </div>
         <div id="twoPlayerGameOver">
             <h1 id="twoPlayerWinner">Gewinner!</h1>
             <p id="twoPlayerResult"></p>
@@ -840,6 +958,23 @@
         <div id="snowballP2" class="snowball-score">Schneemann ❤️❤️❤️</div>
         <div id="snowballInstructions">
             Cappybara: W/S bewegen, D werfen • Schneemann: ↑/↓ bewegen, ← werfen
+        </div>
+        <!-- Touch-Controls für Schneeballschlacht -->
+        <div class="touch-controls" id="snowballTouchControls">
+            <div class="touch-group">
+                <div class="touch-group-vertical">
+                    <button class="touch-btn" id="btnCappyUp">⬆</button>
+                    <button class="touch-btn" id="btnCappyDown">⬇</button>
+                </div>
+                <button class="touch-btn" id="btnCappyThrow">❄</button>
+            </div>
+            <div class="touch-group" id="snowmanControls">
+                <button class="touch-btn" id="btnSnowThrow">❄</button>
+                <div class="touch-group-vertical">
+                    <button class="touch-btn" id="btnSnowUp">⬆</button>
+                    <button class="touch-btn" id="btnSnowDown">⬇</button>
+                </div>
+            </div>
         </div>
         <div id="snowballModeSelect">
             <h2>⛄ Schneeballschlacht</h2>
@@ -1850,6 +1985,12 @@
                     'Cappybara: W/S bewegen, D werfen • Schneemann: ↑/↓ bewegen, ← werfen';
             }
 
+            // Touch-Controls für Schneemann im AI-Modus ausblenden
+            const snowmanControls = document.getElementById('snowmanControls');
+            if (snowmanControls) {
+                snowmanControls.style.display = mode === 'ai' ? 'none' : 'flex';
+            }
+
             initSnowballGame();
         }
 
@@ -2226,6 +2367,187 @@
         function restartSnowball() {
             document.getElementById('snowballGameOver').style.display = 'none';
             document.getElementById('snowballModeSelect').style.display = 'block';
+        }
+
+        // ==================== TOUCH CONTROLS ====================
+
+        // Hilfsfunktion: Touch-Button für Bewegung
+        function setupTouchButton(btnId, keyName, keyObj) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+
+            const activate = (e) => {
+                e.preventDefault();
+                keyObj[keyName] = true;
+                btn.classList.add('active');
+            };
+
+            const deactivate = () => {
+                keyObj[keyName] = false;
+                btn.classList.remove('active');
+            };
+
+            btn.addEventListener('touchstart', activate, { passive: false });
+            btn.addEventListener('touchend', deactivate);
+            btn.addEventListener('touchcancel', deactivate);
+
+            // Auch Mouse-Events für Desktop-Testing
+            btn.addEventListener('mousedown', activate);
+            btn.addEventListener('mouseup', deactivate);
+            btn.addEventListener('mouseleave', deactivate);
+        }
+
+        // Jump & Run: Sprung-Button
+        function setupJumpRunTouchControls() {
+            // Links/Rechts Bewegung
+            setupTouchButton('btnLeft', 'ArrowLeft', keys);
+            setupTouchButton('btnRight', 'ArrowRight', keys);
+
+            // Sprung-Button
+            const btnJump = document.getElementById('btnJump');
+            if (btnJump) {
+                const jump = (e) => {
+                    e.preventDefault();
+                    if (player.onGround && gameRunning && !gamePaused) {
+                        player.velocityY = -player.jumpPower;
+                        player.onGround = false;
+                    }
+                    btnJump.classList.add('active');
+                };
+
+                const release = () => {
+                    btnJump.classList.remove('active');
+                };
+
+                btnJump.addEventListener('touchstart', jump, { passive: false });
+                btnJump.addEventListener('touchend', release);
+                btnJump.addEventListener('touchcancel', release);
+                btnJump.addEventListener('mousedown', jump);
+                btnJump.addEventListener('mouseup', release);
+                btnJump.addEventListener('mouseleave', release);
+            }
+        }
+
+        // Two Player Run: Touch-Controls
+        function setupTwoPlayerTouchControls() {
+            // Spieler 1 Sprung
+            const btnP1 = document.getElementById('btnP1Jump');
+            if (btnP1) {
+                const jumpP1 = (e) => {
+                    e.preventDefault();
+                    if (tp1.onGround && tp1.alive && twoPlayerRunning && !twoPlayerPaused) {
+                        tp1.velocityY = -tp1.jumpPower;
+                        tp1.onGround = false;
+                    }
+                    btnP1.classList.add('active');
+                };
+
+                const releaseP1 = () => {
+                    btnP1.classList.remove('active');
+                };
+
+                btnP1.addEventListener('touchstart', jumpP1, { passive: false });
+                btnP1.addEventListener('touchend', releaseP1);
+                btnP1.addEventListener('touchcancel', releaseP1);
+                btnP1.addEventListener('mousedown', jumpP1);
+                btnP1.addEventListener('mouseup', releaseP1);
+                btnP1.addEventListener('mouseleave', releaseP1);
+            }
+
+            // Spieler 2 Sprung
+            const btnP2 = document.getElementById('btnP2Jump');
+            if (btnP2) {
+                const jumpP2 = (e) => {
+                    e.preventDefault();
+                    if (tp2.onGround && tp2.alive && twoPlayerRunning && !twoPlayerPaused) {
+                        tp2.velocityY = -tp2.jumpPower;
+                        tp2.onGround = false;
+                    }
+                    btnP2.classList.add('active');
+                };
+
+                const releaseP2 = () => {
+                    btnP2.classList.remove('active');
+                };
+
+                btnP2.addEventListener('touchstart', jumpP2, { passive: false });
+                btnP2.addEventListener('touchend', releaseP2);
+                btnP2.addEventListener('touchcancel', releaseP2);
+                btnP2.addEventListener('mousedown', jumpP2);
+                btnP2.addEventListener('mouseup', releaseP2);
+                btnP2.addEventListener('mouseleave', releaseP2);
+            }
+        }
+
+        // Schneeballschlacht: Touch-Controls
+        function setupSnowballTouchControls() {
+            // Cappybara Bewegung
+            setupTouchButton('btnCappyUp', 'w', sbKeys);
+            setupTouchButton('btnCappyDown', 's', sbKeys);
+
+            // Cappybara Werfen
+            const btnCappyThrow = document.getElementById('btnCappyThrow');
+            if (btnCappyThrow) {
+                const throwCappy = (e) => {
+                    e.preventDefault();
+                    if (snowballRunning && !snowballPaused) {
+                        throwSnowballFromPlayer('cappy');
+                    }
+                    btnCappyThrow.classList.add('active');
+                };
+
+                const releaseCappy = () => {
+                    btnCappyThrow.classList.remove('active');
+                };
+
+                btnCappyThrow.addEventListener('touchstart', throwCappy, { passive: false });
+                btnCappyThrow.addEventListener('touchend', releaseCappy);
+                btnCappyThrow.addEventListener('touchcancel', releaseCappy);
+                btnCappyThrow.addEventListener('mousedown', throwCappy);
+                btnCappyThrow.addEventListener('mouseup', releaseCappy);
+                btnCappyThrow.addEventListener('mouseleave', releaseCappy);
+            }
+
+            // Schneemann Bewegung
+            setupTouchButton('btnSnowUp', 'ArrowUp', sbKeys);
+            setupTouchButton('btnSnowDown', 'ArrowDown', sbKeys);
+
+            // Schneemann Werfen
+            const btnSnowThrow = document.getElementById('btnSnowThrow');
+            if (btnSnowThrow) {
+                const throwSnow = (e) => {
+                    e.preventDefault();
+                    if (snowballRunning && !snowballPaused && snowballMode === 'human') {
+                        throwSnowballFromPlayer('snowman');
+                    }
+                    btnSnowThrow.classList.add('active');
+                };
+
+                const releaseSnow = () => {
+                    btnSnowThrow.classList.remove('active');
+                };
+
+                btnSnowThrow.addEventListener('touchstart', throwSnow, { passive: false });
+                btnSnowThrow.addEventListener('touchend', releaseSnow);
+                btnSnowThrow.addEventListener('touchcancel', releaseSnow);
+                btnSnowThrow.addEventListener('mousedown', throwSnow);
+                btnSnowThrow.addEventListener('mouseup', releaseSnow);
+                btnSnowThrow.addEventListener('mouseleave', releaseSnow);
+            }
+        }
+
+        // Alle Touch-Controls initialisieren
+        function setupAllTouchControls() {
+            setupJumpRunTouchControls();
+            setupTwoPlayerTouchControls();
+            setupSnowballTouchControls();
+        }
+
+        // Touch-Controls beim Laden initialisieren
+        document.addEventListener('DOMContentLoaded', setupAllTouchControls);
+        // Falls DOMContentLoaded bereits gefeuert wurde
+        if (document.readyState !== 'loading') {
+            setupAllTouchControls();
         }
     </script>
 </body>
